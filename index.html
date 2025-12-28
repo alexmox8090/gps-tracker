@@ -5,17 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>GPS TRACKER MOTOR</title>
 
-  <!-- Leaflet (OpenStreetMap) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    :root{
-      --bg:#0b0f14;--card:#121926;--bd:#263247;--txt:#e8eef7;--mut:#94a3b8;
-      --ok:#22c55e;--bad:#ef4444;--warn:#f59e0b;--btn:#1f2937;--btnbd:#334155;
-    }
+    :root{--bg:#0b0f14;--card:#121926;--bd:#263247;--txt:#e8eef7;--mut:#94a3b8;--ok:#22c55e;--bad:#ef4444;--warn:#f59e0b;--btn:#1f2937;--btnbd:#334155;}
     body{font-family:system-ui,Arial;margin:16px;background:var(--bg);color:var(--txt)}
-    h2{margin:0 0 12px 0;display:flex;gap:10px;align-items:center}
+    h2{margin:0 0 12px 0}
     .card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -23,61 +19,44 @@
     .k{color:var(--mut);font-size:12px}
     .v{font-size:18px;font-weight:900}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-    .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
     .badge{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #334155;font-size:12px}
     .badge.ok{color:var(--ok)} .badge.bad{color:var(--bad)} .badge.warn{color:var(--warn)}
-    button,input,select{
-      background:var(--btn);color:var(--txt);
-      border:1px solid var(--btnbd);border-radius:10px;padding:10px 12px
-    }
+    button,input,select{background:var(--btn);color:var(--txt);border:1px solid var(--btnbd);border-radius:10px;padding:10px 12px}
     button{cursor:pointer}
-    hr{border:none;border-top:1px solid #263247;margin:12px 0}
     #map{width:100%;height:360px;border-radius:14px;border:1px solid #334155;overflow:hidden;background:#0f1623}
-    .pill{display:flex;gap:8px;align-items:center}
-    .switch{transform:scale(1.25)}
     .tiny{font-size:11px;color:var(--mut)}
   </style>
 </head>
 <body>
 
-<h2>🛰 GPS TRACKER MOTOR</h2>
+<h2>🏍 GPS TRACKER MOTOR (CMD + Trail + SAF)</h2>
 
 <div class="card">
   <div class="row" style="justify-content:space-between">
-    <div style="min-width:220px">
-      <div class="k">Status GPS</div>
-      <div id="gpsStatus" class="v warn">NO DATA</div>
-      <div class="tiny" id="gpsSince">-</div>
+    <div>
+      <div class="k">GPS</div>
+      <div id="gpsStatus" class="v">-</div>
+      <div class="tiny" id="lu">-</div>
     </div>
-
     <div class="row">
-      <span class="badge" id="bEngine">⚡ Engine: -</span>
-      <span class="badge" id="bAlarm">🔔 Alarm: -</span>
-      <span class="badge" id="bSaf">🛡 SAF: -</span>
-    </div>
-  </div>
-
-  <div class="row" style="margin-top:12px">
-    <div class="pill">
-      <div class="k">Satelit / HDOP</div>
-      <div class="v mono" id="sats">0</div>
-      <div class="v mono" id="hdop">99.9</div>
+      <span id="bEngine" class="badge">⚡ Engine: -</span>
+      <span id="bAlarm"  class="badge">🔔 Alarm: -</span>
+      <span id="bSaf"    class="badge">🛡 SAF: -</span>
     </div>
   </div>
 
   <div class="grid" style="margin-top:12px">
     <div>
-      <div class="k">Lokasi</div>
-      <div class="v mono" id="latlng">0.000000, 0.000000</div>
+      <div class="k">Lat/Lng</div>
+      <div id="latlng" class="v mono">-</div>
     </div>
     <div>
-      <div class="k">Kecepatan</div>
-      <div class="v" id="speed">0</div>
-      <div class="tiny">km/h</div>
+      <div class="k">Speed / Sat / HDOP</div>
+      <div class="v mono"><span id="spd">-</span> km/h • <span id="sats">-</span> • <span id="hdop">-</span></div>
     </div>
   </div>
 
-  <hr/>
+  <hr style="border:none;border-top:1px solid #263247;margin:12px 0"/>
 
   <div class="row">
     <button onclick="cmdEngine(true)">ENGINE ON</button>
@@ -86,53 +65,30 @@
     <button onclick="cmdAlarm(false)">ALARM OFF</button>
   </div>
 
-  <hr/>
+  <hr style="border:none;border-top:1px solid #263247;margin:12px 0"/>
 
-  <!-- SAF modern (autosave + auto ARM from Web UI) -->
-  <div class="row" style="align-items:flex-end">
-    <div class="pill">
-      <span class="k">SAF</span>
-      <input id="safToggle" class="switch" type="checkbox">
-    </div>
-
-    <div class="pill">
-      <span class="k">Threshold (m)</span>
-      <input id="safTh" type="number" min="5" max="500" value="25" style="width:110px">
-      <span id="safSaved" class="tiny">—</span>
-    </div>
-
-    <div class="pill">
-      <label class="tiny" style="display:flex;gap:8px;align-items:center">
-        <input id="follow" type="checkbox" checked> Follow Map
-      </label>
-      <button onclick="resetTrail()">Reset Trail</button>
-      <button onclick="copyCoord()">Copy Lat,Lon</button>
-      <button onclick="openMaps()">Open Google Maps</button>
-    </div>
-
-    <div class="pill">
-      <span class="k">Update</span>
-      <select id="rate">
-        <option value="200">200ms</option>
-        <option value="500" selected>500ms</option>
-        <option value="1000">1s</option>
-        <option value="2000">2s</option>
-      </select>
-      <span class="tiny">Last: <span id="lu" class="mono">-</span></span>
-    </div>
+  <div class="row">
+    <label class="tiny">SAF:</label>
+    <input id="safToggle" type="checkbox">
+    <label class="tiny">Threshold (m)</label>
+    <input id="safTh" type="number" min="5" max="500" value="25" style="width:110px">
+    <button onclick="safSetBase()">SET BASE</button>
+    <span id="safInfo" class="tiny">-</span>
   </div>
 
-  <div class="tiny" style="margin-top:10px">
-    SAF: saat ON, Web UI akan otomatis menyimpan patokan titik (<span class="mono">baseLat/baseLng</span>) dari lokasi terakhir yang valid.
+  <div class="row" style="margin-top:10px">
+    <label class="tiny" style="display:flex;gap:8px;align-items:center">
+      <input id="follow" type="checkbox" checked> Follow Map
+    </label>
+    <button onclick="resetTrail()">Reset Trail</button>
+    <button onclick="openMaps()">Open Google Maps</button>
   </div>
 </div>
 
 <div class="card">
-  <div class="k">Map + Trail (OpenStreetMap)</div>
+  <div class="k">Map + Trail</div>
   <div id="map"></div>
-  <div class="tiny" style="margin-top:8px">
-    Kalau GPS belum FIX, marker belum muncul dan trail kosong.
-  </div>
+  <div class="tiny" style="margin-top:8px">Jika NO FIX, marker & trail belum muncul.</div>
 </div>
 
 <div class="card">
@@ -140,275 +96,158 @@
   <div id="log" class="mono tiny" style="white-space:pre-wrap;line-height:1.35"></div>
 </div>
 
-<!-- Firebase v8 compat -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-/* ===================== CONFIG ======================= */
 const firebaseConfig = {
   databaseURL: "https://gpsmotor20251-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
-const DEVICE_ID = "motor1";
-const REF_PATH  = "trackers/" + DEVICE_ID;
-/* =================================================== */
 
 firebase.initializeApp(firebaseConfig);
-const db  = firebase.database();
-const ref = db.ref(REF_PATH);
 
-let lastData = null;
-let _thTimer = null;
-let _pollTimer = null;
+const DEVICE_ID = "motor1";
+const REF_PATH = "trackers/" + DEVICE_ID;
+
+const db = firebase.database();
+const rootRef = db.ref(REF_PATH);
 
 function log(s){
   const el = document.getElementById("log");
-  if(!el) return;
   const t = new Date().toLocaleTimeString();
   el.textContent = `[${t}] ${s}\n` + el.textContent;
 }
-function nowStr(){ return new Date().toLocaleTimeString(); }
-function fmt(n,d){ return (n==null || !isFinite(Number(n))) ? "-" : Number(n).toFixed(d); }
 
-function setBadge(elId, on, text){
-  const el = document.getElementById(elId);
-  if(!el) return;
+function badge(el, on, text){
   el.textContent = text;
   el.className = "badge " + (on ? "ok" : "bad");
 }
-function showSaved(msg){
-  const el = document.getElementById("safSaved");
-  if(!el) return;
-  el.textContent = msg;
-  setTimeout(()=>{ el.textContent=""; }, 1200);
-}
 
-/* ===================== COMMANDS (FIXED PATH) ===================== */
-/* Engine ditulis ke /cmd/engine (sesuai DB kamu) */
+// ===== CMD writers (KONSISTEN) =====
 function cmdEngine(on){
-  ref.child("cmd").update({ engine: !!on }).then(()=>{
-    log("cmd.engine -> " + (on?"ON":"OFF"));
-  }).catch(e=>alert("Gagal engine: "+e.message));
+  db.ref(REF_PATH + "/cmd/engine").set(!!on).then(()=>log("CMD engine -> " + on));
 }
-/* Alarm di root: /alarm (sesuai screenshot kamu) */
 function cmdAlarm(on){
-  ref.update({ alarm: !!on }).then(()=>{
-    log("alarm -> " + (on?"ON":"OFF"));
-  }).catch(e=>alert("Gagal alarm: "+e.message));
+  db.ref(REF_PATH + "/cmd/alarm").set(!!on).then(()=>log("CMD alarm -> " + on));
+}
+function safSetBase(){
+  db.ref(REF_PATH + "/cmd/saf/setBase").set(true).then(()=>log("CMD saf setBase"));
 }
 
-/* ===================== SAF UI ===================== */
-document.addEventListener("DOMContentLoaded", () => {
-  const rateSel = document.getElementById("rate");
-  const tog = document.getElementById("safToggle");
-  const th  = document.getElementById("safTh");
-
-  if(rateSel){
-    rateSel.addEventListener("change", ()=>{
-      startPolling();
-      log("Update rate -> " + rateSel.value + "ms");
-    });
-  }
-
-  if(tog){
-    tog.addEventListener("change", () => {
-      const enabled = tog.checked;
-
-      ref.child("saf").update({ enabled })
-        .then(async ()=>{
-          showSaved(enabled ? "✅ SAF ON" : "✅ SAF OFF");
-          log("saf.enabled -> " + (enabled?"true":"false"));
-
-          if(enabled){
-            // Auto ARM: ambil GPS terakhir valid dari d.gps
-            const d = lastData || {};
-            const g = d.gps || {};
-            const lat = Number(g.lat || 0);
-            const lng = Number(g.lng || 0);
-
-            if(isFinite(lat) && isFinite(lng) && !(lat===0 && lng===0)){
-              await ref.child("saf").update({
-                baseLat: lat,
-                baseLng: lng,
-                armedAt: Date.now()
-              });
-              showSaved("📍 ARM OK");
-              log("Auto ARM baseLat/baseLng tersimpan");
-            } else {
-              log("Auto ARM gagal (GPS belum valid). Toggle OFF->ON setelah FIX.");
-            }
-          }
-        })
-        .catch(e=>alert("Gagal SAF toggle: "+e.message));
-    });
-  }
-
-  if(th){
-    th.addEventListener("input", () => {
-      clearTimeout(_thTimer);
-      _thTimer = setTimeout(() => {
-        let v = Number(th.value || 25);
-        if (isNaN(v)) v = 25;
-        v = Math.max(5, Math.min(500, v));
-        th.value = v;
-
-        ref.child("saf").update({ threshold: v })
-          .then(()=>{ showSaved("✅ Saved "+v+"m"); log("saf.threshold -> "+v); })
-          .catch(e=>alert("Gagal save threshold: "+e.message));
-      }, 600);
-    });
-  }
-
-  initMap();
-  startPolling();
+// SAF toggle + threshold auto save
+document.getElementById("safToggle").addEventListener("change", (e)=>{
+  db.ref(REF_PATH + "/cmd/saf/enabled").set(!!e.target.checked).then(()=>log("CMD saf enabled -> "+e.target.checked));
+});
+let thTimer=null;
+document.getElementById("safTh").addEventListener("input", (e)=>{
+  clearTimeout(thTimer);
+  thTimer=setTimeout(()=>{
+    let v = Number(e.target.value||25);
+    v = Math.max(5, Math.min(500, v));
+    e.target.value=v;
+    db.ref(REF_PATH + "/cmd/saf/threshold").set(v).then(()=>log("CMD saf threshold -> "+v));
+  }, 600);
 });
 
-/* ===================== MAP + TRAIL ===================== */
+// ===== Map + Trail =====
 let map, marker, trailLine;
-let trail = [];
-let lastTrailPush = 0;
+let trail=[], lastTrailPush=0;
 
 function initMap(){
-  map = L.map('map', { zoomControl: true });
+  map = L.map('map');
   map.setView([3.5952, 98.6722], 14); // default Medan
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(map);
-
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   trailLine = L.polyline([], { weight: 4 }).addTo(map);
 }
-function resetTrail(){
-  trail = [];
-  if(trailLine) trailLine.setLatLngs([]);
-  log("Trail reset");
-}
-function updateMap(lat, lng){
-  if(!map) return;
-
-  const follow = document.getElementById("follow")?.checked ?? true;
-
+function updateMap(lat,lng){
+  const follow = document.getElementById("follow").checked;
   if(!marker){
-    marker = L.marker([lat, lng]).addTo(map);
-    if(follow) map.setView([lat, lng], 17);
+    marker = L.marker([lat,lng]).addTo(map);
+    if(follow) map.setView([lat,lng], 17);
   } else {
-    marker.setLatLng([lat, lng]);
-    if(follow) map.panTo([lat, lng], { animate:true });
+    marker.setLatLng([lat,lng]);
+    if(follow) map.panTo([lat,lng], {animate:true});
   }
 
-  const now = Date.now();
-  if(!lastTrailPush || (now - lastTrailPush) > 1200){
-    lastTrailPush = now;
-    trail.push([lat, lng]);
-    if(trail.length > 400) trail.shift();
+  const now=Date.now();
+  if(!lastTrailPush || (now-lastTrailPush)>1200){
+    lastTrailPush=now;
+    trail.push([lat,lng]);
+    if(trail.length>400) trail.shift();
     trailLine.setLatLngs(trail);
   }
 }
-
-/* ===================== UI HELPERS ===================== */
-function copyCoord(){
-  const d = lastData || {};
-  const g = d.gps || {};
-  const lat = Number(g.lat||0), lng = Number(g.lng||0);
-  if(!isFinite(lat)||!isFinite(lng)|| (lat===0 && lng===0)) return alert("Belum ada FIX.");
-  const t = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-  navigator.clipboard.writeText(t).then(()=>alert("Copied: "+t)).catch(()=>alert(t));
-}
+function resetTrail(){ trail=[]; if(trailLine) trailLine.setLatLngs([]); log("Trail reset"); }
 function openMaps(){
-  const d = lastData || {};
-  const g = d.gps || {};
-  const lat = Number(g.lat||0), lng = Number(g.lng||0);
-  if(!isFinite(lat)||!isFinite(lng)|| (lat===0 && lng===0)) return alert("Belum ada FIX.");
-  window.open(`https://maps.google.com/?q=${lat},${lng}`,"_blank");
+  if(!window._lastFix) return alert("Belum ada FIX.");
+  window.open(`https://maps.google.com/?q=${window._lastFix.lat},${window._lastFix.lng}`,"_blank");
 }
 
-/* ===================== POLLING + RENDER (FIXED READ PATHS) ===================== */
-function startPolling(){
-  const rate = Number(document.getElementById("rate")?.value || 500);
-  if(_pollTimer) clearInterval(_pollTimer);
-  _pollTimer = setInterval(fetchAndRender, rate);
-  fetchAndRender();
-}
-function setGpsStatusFix(isFix, hasData){
-  const st = document.getElementById("gpsStatus");
-  if(!st) return;
-  if(isFix){
-    st.textContent = "FIX OK";
-    st.className = "v ok";
-  } else if(hasData){
-    st.textContent = "NO FIX";
-    st.className = "v warn";
-  } else {
-    st.textContent = "NO DATA";
-    st.className = "v bad";
-  }
-}
+initMap();
 
-async function fetchAndRender(){
+// ===== Polling =====
+async function tick(){
   try{
-    const snap = await ref.get();
+    const snap = await rootRef.get();
     const d = snap.val() || {};
-    lastData = d;
 
-    document.getElementById("lu").textContent = nowStr();
+    // status aktual
+    const eng = !!d.engine;
+    const alm = !!d.alarm;
 
-    // --- READ GPS FROM /gps ---
+    // gps
     const g = d.gps || {};
-    const lat  = Number(g.lat || 0);
-    const lng  = Number(g.lng || 0);
-    const spd  = Number(g.speed || 0);
-    const sats = Number(g.sats || 0);
-    const hdop = Number(g.hdop || 99.9);
-    const hasFix = (g.hasFix === true) || ((sats > 0) && isFinite(lat) && isFinite(lng) && !(lat===0 && lng===0) && (hdop < 50));
-    const hasData = (g.lastUpdate && Number(g.lastUpdate) > 0) || (sats > 0);
+    const hasFix = !!g.hasFix;
+    const lat = Number(g.lat||0);
+    const lng = Number(g.lng||0);
 
-    setGpsStatusFix(!!hasFix, !!hasData);
+    document.getElementById("lu").textContent = "Last UI: " + new Date().toLocaleTimeString();
+    document.getElementById("gpsStatus").textContent = hasFix ? "FIX OK" : "NO FIX";
+    document.getElementById("latlng").textContent = hasFix ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : "-";
+    document.getElementById("spd").textContent = Number(g.speed||0).toFixed(1);
+    document.getElementById("sats").textContent = g.sats ?? "-";
+    document.getElementById("hdop").textContent = Number(g.hdop||99.9).toFixed(1);
 
-    const lastUpd = Number(g.lastUpdate || d.lastUpdate || 0);
-    document.getElementById("gpsSince").textContent =
-      "Last update: " + (lastUpd ? new Date(lastUpd).toLocaleString() : "-");
+    badge(document.getElementById("bEngine"), eng, "⚡ Engine: " + (eng ? "ON" : "OFF"));
+    badge(document.getElementById("bAlarm"),  alm, "🔔 Alarm: " + (alm ? "ON" : "OFF"));
 
-    document.getElementById("sats").textContent = String(sats);
-    document.getElementById("hdop").textContent = fmt(hdop, 1);
-    document.getElementById("latlng").textContent = `${fmt(lat,6)}, ${fmt(lng,6)}`;
-    document.getElementById("speed").textContent = fmt(spd, 1);
-
-    // --- BADGES ---
-    const cmd = d.cmd || {};
-    setBadge("bEngine", !!cmd.engine, `⚡ Engine: ${cmd.engine ? "ON" : "OFF"}`);
-    setBadge("bAlarm",  !!d.alarm,    `🔔 Alarm: ${d.alarm ? "ON" : "OFF"}`);
-
+    // SAF status
     const saf = d.saf || {};
     const safEn = !!saf.enabled;
-    const safTh = Number(saf.threshold || 25);
-    setBadge("bSaf", safEn, `🛡 SAF (${safTh}m) ${safEn ? "ON" : "OFF"}`);
+    const safTh = Number(saf.threshold||25);
+    const baseOk = !!saf.baseValid;
+    const alert = !!saf.alert;
 
-    // sync SAF UI
+    badge(document.getElementById("bSaf"), safEn, "🛡 SAF: " + (safEn ? "ON" : "OFF") + ` (${safTh}m)`);
+
+    document.getElementById("safInfo").textContent =
+      `base:${baseOk?"OK":"-"} • alert:${alert?"YES":"NO"}`;
+
+    // sync inputs from cmd (optional)
+    const cmd = d.cmd || {};
+    const cmdSaf = (cmd.saf || {});
+    const cmdEn = !!cmdSaf.enabled;
+    const cmdTh = Number(cmdSaf.threshold||safTh);
+
     const tog = document.getElementById("safToggle");
-    if(tog && tog.checked !== safEn) tog.checked = safEn;
+    if(tog.checked !== cmdEn) tog.checked = cmdEn;
 
-    const thIn = document.getElementById("safTh");
-    if(thIn && Number(thIn.value) !== safTh) thIn.value = safTh;
+    const th = document.getElementById("safTh");
+    if(Number(th.value) !== cmdTh) th.value = cmdTh;
 
-    // map + trail
-    if(hasFix){
-      updateMap(lat, lng);
+    // map
+    if(hasFix && lat && lng){
+      window._lastFix = {lat,lng};
+      updateMap(lat,lng);
     }
 
   }catch(e){
-    const st = document.getElementById("gpsStatus");
-    if(st){
-      st.textContent = "DISCONNECTED";
-      st.className = "v bad";
-    }
+    log("UI error: " + e.message);
   }
 }
 
-/* Optional realtime listener (ringan) */
-ref.on("value", (snap)=>{
-  lastData = snap.val() || lastData;
-});
+setInterval(tick, 500);
+tick();
 </script>
 
 </body>
