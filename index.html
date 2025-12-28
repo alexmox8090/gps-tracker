@@ -1,0 +1,166 @@
+{<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GPS Tracker Motor</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui,Arial;
+  background:#0b0f14;
+  color:#e8eef7;
+}
+.container{
+  padding:16px;
+  max-width:600px;
+  margin:auto;
+}
+.card{
+  background:#121926;
+  border:1px solid #263247;
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:12px;
+}
+h2{margin:0 0 10px}
+.k{color:#94a3b8;font-size:12px}
+.v{font-size:18px;font-weight:700}
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid #334155;
+  display:inline-block;
+  margin-right:6px;
+}
+.ok{color:#22c55e}
+.bad{color:#ef4444}
+.warn{color:#f59e0b}
+button{
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid #334155;
+  background:#1f2937;
+  color:#fff;
+  cursor:pointer;
+}
+#map{
+  width:100%;
+  height:320px;
+  border-radius:12px;
+  border:1px solid #334155;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h2>🏍 GPS TRACKER MOTOR</h2>
+
+  <div class="card">
+    <div class="k">Status GPS</div>
+    <div id="gpsStatus" class="v warn">MENUNGGU DATA</div>
+
+    <div class="k">Satelit / HDOP</div>
+    <div class="v">
+      🛰 <span id="sats">-</span> |
+      🎯 <span id="hdop">-</span>
+    </div>
+
+    <div class="k">Lokasi</div>
+    <div class="v">
+      📍 <span id="lat">-</span>, <span id="lng">-</span>
+    </div>
+
+    <div class="k">Kecepatan</div>
+    <div class="v">🛵 <span id="speed">0</span> km/h</div>
+  </div>
+
+  <div class="card">
+    <span id="engine" class="badge">⚡ Engine</span>
+    <span id="alarm" class="badge">🔔 Alarm</span>
+    <span id="saf" class="badge">🛡 SAF</span>
+  </div>
+
+  <div class="card">
+    <button onclick="engineOn()">ENGINE ON</button>
+    <button onclick="engineOff()">ENGINE OFF</button>
+    <button onclick="alarmOn()">ALARM ON</button>
+    <button onclick="alarmOff()">ALARM OFF</button>
+  </div>
+
+  <div class="card">
+    <iframe id="map" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script>
+/* ================= FIREBASE CONFIG ================= */
+/* GANTI SESUAI PROJECT KAMU */
+const firebaseConfig = {
+  databaseURL: "https://gpsmotor20251-default-rtdb.asia-southeast1.firebasedatabase.app/"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* PATH DATA */
+const ref = db.ref("trackers/motor1");
+
+/* ================= REALTIME LISTENER ================= */
+ref.on("value", snap => {
+  if(!snap.exists()) return;
+  const d = snap.val();
+
+  document.getElementById("lat").innerText = d.lat.toFixed(6);
+  document.getElementById("lng").innerText = d.lng.toFixed(6);
+  document.getElementById("speed").innerText = d.speed;
+  document.getElementById("sats").innerText = d.sats;
+  document.getElementById("hdop").innerText = d.hdop;
+
+  // GPS status
+  const gpsStatus = document.getElementById("gpsStatus");
+  if(d.sats > 0){
+    gpsStatus.innerText = "FIX OK";
+    gpsStatus.className = "v ok";
+  }else{
+    gpsStatus.innerText = "NO FIX";
+    gpsStatus.className = "v warn";
+  }
+
+  // Engine
+  setBadge("engine", d.engine, "⚡ Engine");
+
+  // Alarm
+  setBadge("alarm", d.alarm, "🔔 Alarm");
+
+  // SAF
+  setBadge("saf", d.saf?.enabled, `🛡 SAF (${d.saf?.threshold || 0}m)`);
+
+  // Map
+  if(d.lat !== 0 && d.lng !== 0){
+    document.getElementById("map").src =
+      `https://www.google.com/maps?q=${d.lat},${d.lng}&z=18&output=embed`;
+  }
+});
+
+function setBadge(id, state, text){
+  const el = document.getElementById(id);
+  el.innerText = text + (state ? " ON" : " OFF");
+  el.className = "badge " + (state ? "ok" : "bad");
+}
+
+/* ================= COMMANDS ================= */
+function engineOn(){ ref.update({engine:true}); }
+function engineOff(){ ref.update({engine:false}); }
+function alarmOn(){ ref.update({alarm:true}); }
+function alarmOff(){ ref.update({alarm:false}); }
+</script>
+
+</body>
+</html>
