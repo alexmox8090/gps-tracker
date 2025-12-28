@@ -21,227 +21,155 @@
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
     .badge{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #334155;font-size:12px}
     .badge.ok{color:var(--ok)} .badge.bad{color:var(--bad)} .badge.warn{color:var(--warn)}
-    button,input,select{background:var(--btn);color:var(--txt);border:1px solid var(--btnbd);border-radius:10px;padding:10px 12px}
+    button,input{background:var(--btn);color:var(--txt);border:1px solid var(--btnbd);border-radius:10px;padding:10px 12px}
     button{cursor:pointer}
     #map{width:100%;height:360px;border-radius:14px;border:1px solid #334155;overflow:hidden;background:#0f1623}
     .tiny{font-size:11px;color:var(--mut)}
-    .hidden{display:none}
     hr{border:none;border-top:1px solid #263247;margin:12px 0}
+    .pill{font-size:11px;border:1px solid #334155;border-radius:999px;padding:4px 8px;color:#cbd5e1}
   </style>
 </head>
 <body>
 
-<h2>🏍 GPS TRACKER MOTOR (CMD + Trail + SAF)</h2>
+<h2>🏍 GPS TRACKER MOTOR (HYBRID CMD/STATUS)</h2>
 
-<!-- ===================== LOGIN (PIN) ===================== -->
-<div id="loginCard" class="card">
-  <div class="k">PIN Login</div>
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <div>
+      <div class="k">GPS</div>
+      <div id="gpsStatus" class="v">-</div>
+      <div class="tiny" id="lu">-</div>
+    </div>
+    <div class="row">
+      <span id="bEngine" class="badge">⚡ Engine: -</span>
+      <span id="bAlarm"  class="badge">🔔 Alarm: -</span>
+      <span id="bSaf"    class="badge">🛡 SAF: -</span>
+      <span id="src" class="pill">src:-</span>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:12px">
+    <div>
+      <div class="k">Lat/Lng</div>
+      <div id="latlng" class="v mono">-</div>
+    </div>
+    <div>
+      <div class="k">Speed / Sat / HDOP</div>
+      <div class="v mono"><span id="spd">-</span> km/h • <span id="sats">-</span> • <span id="hdop">-</span></div>
+    </div>
+  </div>
+
+  <hr/>
+
+  <div class="row">
+    <button onclick="cmdEngine(true)">ENGINE ON</button>
+    <button onclick="cmdEngine(false)">ENGINE OFF</button>
+    <button onclick="cmdAlarm(true)">ALARM ON</button>
+    <button onclick="cmdAlarm(false)">ALARM OFF</button>
+  </div>
+
+  <hr/>
+
+  <div class="row">
+    <label class="tiny">SAF:</label>
+    <input id="safToggle" type="checkbox">
+    <label class="tiny">Threshold (m)</label>
+    <input id="safTh" type="number" min="5" max="500" value="25" style="width:110px">
+    <button onclick="safSetBase()">SET BASE</button>
+    <span id="safInfo" class="tiny">-</span>
+  </div>
+
   <div class="row" style="margin-top:10px">
-    <input id="pin" type="password" placeholder="Masukkan PIN" style="max-width:220px" autocomplete="off">
-    <button id="btnLogin">Login</button>
-    <button id="btnShow" type="button">👁</button>
-  </div>
-  <div class="tiny" id="pinHint" style="margin-top:8px"></div>
-  <div class="tiny" style="margin-top:8px">
-    Tips: kalau cache, buka pakai <span class="mono">...?v=2</span>
+    <label class="tiny" style="display:flex;gap:8px;align-items:center">
+      <input id="follow" type="checkbox" checked> Follow Map
+    </label>
+    <button onclick="resetTrail()">Reset Trail</button>
+    <button onclick="openMaps()">Open Google Maps</button>
   </div>
 </div>
 
-<!-- ===================== APP ===================== -->
-<div id="app" class="hidden">
-
-  <div class="card">
-    <div class="row" style="justify-content:space-between">
-      <div>
-        <div class="k">GPS</div>
-        <div id="gpsStatus" class="v">-</div>
-        <div class="tiny" id="lu">-</div>
-      </div>
-      <div class="row">
-        <span id="bEngine" class="badge">⚡ Engine: -</span>
-        <span id="bAlarm"  class="badge">🔔 Alarm: -</span>
-        <span id="bSaf"    class="badge">🛡 SAF: -</span>
-      </div>
-    </div>
-
-    <div class="grid" style="margin-top:12px">
-      <div>
-        <div class="k">Lat/Lng</div>
-        <div id="latlng" class="v mono">-</div>
-      </div>
-      <div>
-        <div class="k">Speed / Sat / HDOP</div>
-        <div class="v mono"><span id="spd">-</span> km/h • <span id="sats">-</span> • <span id="hdop">-</span></div>
-      </div>
-    </div>
-
-    <hr/>
-
-    <div class="row">
-      <button onclick="cmdEngine(true)">ENGINE ON</button>
-      <button onclick="cmdEngine(false)">ENGINE OFF</button>
-      <button onclick="cmdAlarm(true)">ALARM ON</button>
-      <button onclick="cmdAlarm(false)">ALARM OFF</button>
-    </div>
-
-    <hr/>
-
-    <div class="row">
-      <label class="tiny">SAF:</label>
-      <input id="safToggle" type="checkbox">
-      <label class="tiny">Threshold (m)</label>
-      <input id="safTh" type="number" min="5" max="500" value="25" style="width:110px">
-      <button onclick="safSetBase()">SET BASE</button>
-      <span id="safInfo" class="tiny">-</span>
-    </div>
-
-    <div class="row" style="margin-top:10px">
-      <label class="tiny" style="display:flex;gap:8px;align-items:center">
-        <input id="follow" type="checkbox" checked> Follow Map
-      </label>
-      <button onclick="resetTrail()">Reset Trail</button>
-      <button onclick="openMaps()">Open Google Maps</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="k">Map + Trail</div>
-    <div id="map"></div>
-    <div class="tiny" style="margin-top:8px">Jika NO FIX, marker & trail belum muncul.</div>
-  </div>
-
-  <div class="card">
-    <div class="k">Log</div>
-    <div id="log" class="mono tiny" style="white-space:pre-wrap;line-height:1.35"></div>
-  </div>
-
+<div class="card">
+  <div class="k">Map + Trail</div>
+  <div id="map"></div>
+  <div class="tiny" style="margin-top:8px">Jika NO FIX, marker & trail belum muncul.</div>
 </div>
 
-<!-- Firebase v8 -->
+<div class="card">
+  <div class="k">Log</div>
+  <div id="log" class="mono tiny" style="white-space:pre-wrap;line-height:1.35"></div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-/* ===================== SETTINGS ===================== */
-const PIN_CODE = "2580";         // ganti PIN kamu
-const DEVICE_ID = "motor1";      // 1 motor dulu
+const firebaseConfig = {
+  databaseURL: "https://gpsmotor20251-default-rtdb.asia-southeast1.firebasedatabase.app/"
+};
+firebase.initializeApp(firebaseConfig);
+
+const DEVICE_ID = "gps-tracker";
 const REF_PATH = "trackers/" + DEVICE_ID;
 
-// Firebase config (cukup untuk RTDB)
-const firebaseConfig = {
-  apiKey: "AIzaSyAtTmnq40bvwFsKBEcV3wqlpAjwe9-9690",
-  databaseURL: "https://gpsmotor20251-default-rtdb.asia-southeast1.firebasedatabase.app/",
-  authDomain: "gpsmotor20251-default-rtdb.firebaseapp.com",
-  projectId: "gpsmotor20251-default-rtdb"
-};
-
-firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const rootRef = db.ref(REF_PATH);
 
-/* ===================== HELPERS ===================== */
 function log(s){
   const el = document.getElementById("log");
   const t = new Date().toLocaleTimeString();
   el.textContent = `[${t}] ${s}\n` + el.textContent;
 }
-
-function setBadge(el, state, text, mode){
+function badge(el, on, text){
   el.textContent = text;
-  const cls = mode ? mode : (state ? "ok" : "bad");
-  el.className = "badge " + cls;
+  el.className = "badge " + (on ? "ok" : "bad");
 }
 
-function fmt(n, d){
-  if(n === null || n === undefined || isNaN(n)) return "-";
-  return Number(n).toFixed(d);
-}
-
-/* ===================== LOGIN ===================== */
-let isLogged = false;
-let started = false;
-
-function unlockUI(){
-  document.getElementById("loginCard").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
-  isLogged = true;
-  log("Login OK ✅");
-  startRealtime();
-}
-
-function doLogin(){
-  const input = (document.getElementById("pin").value || "").trim();
-  const hint  = document.getElementById("pinHint");
-
-  if(!input){
-    hint.textContent = "Masukkan PIN dulu.";
-    return;
-  }
-
-  if(input === PIN_CODE){
-    hint.textContent = "PIN benar ✅";
-    unlockUI();
-  } else {
-    hint.textContent = "PIN salah ❌";
-  }
-}
-
-document.getElementById("btnLogin").addEventListener("click", doLogin);
-document.getElementById("pin").addEventListener("keydown", (e)=>{
-  if(e.key === "Enter") doLogin();
-});
-document.getElementById("btnShow").addEventListener("click", ()=>{
-  const el = document.getElementById("pin");
-  el.type = (el.type === "password") ? "text" : "password";
-});
-
-/* ===================== CMD WRITERS ===================== */
 function cmdEngine(on){
-  if(!isLogged) return alert("Login dulu.");
-  db.ref(REF_PATH + "/cmd/engine").set(!!on).then(()=>log("CMD engine -> " + on));
+  db.ref(REF_PATH + "/cmd/engine").set(!!on)
+    .then(()=>log("CMD engine -> " + on))
+    .catch(e=>log("ERR engine: " + e.message));
 }
 function cmdAlarm(on){
-  if(!isLogged) return alert("Login dulu.");
-  db.ref(REF_PATH + "/cmd/alarm").set(!!on).then(()=>log("CMD alarm -> " + on));
+  db.ref(REF_PATH + "/cmd/alarm").set(!!on)
+    .then(()=>log("CMD alarm -> " + on))
+    .catch(e=>log("ERR alarm: " + e.message));
 }
 function safSetBase(){
-  if(!isLogged) return alert("Login dulu.");
-  db.ref(REF_PATH + "/cmd/saf/setBase").set(true).then(()=>log("CMD saf setBase"));
+  db.ref(REF_PATH + "/cmd/saf/setBase").set(true)
+    .then(()=>log("CMD saf setBase"))
+    .catch(e=>log("ERR setBase: " + e.message));
 }
 
-// SAF toggle + threshold auto save
 document.getElementById("safToggle").addEventListener("change", (e)=>{
-  if(!isLogged) return;
   db.ref(REF_PATH + "/cmd/saf/enabled").set(!!e.target.checked)
-    .then(()=>log("CMD saf enabled -> "+e.target.checked));
+    .then(()=>log("CMD saf enabled -> "+e.target.checked))
+    .catch(err=>log("ERR saf enabled: " + err.message));
 });
-
 let thTimer=null;
 document.getElementById("safTh").addEventListener("input", (e)=>{
-  if(!isLogged) return;
   clearTimeout(thTimer);
   thTimer=setTimeout(()=>{
     let v = Number(e.target.value||25);
     v = Math.max(5, Math.min(500, v));
     e.target.value=v;
-    db.ref(REF_PATH + "/cmd/saf/threshold").set(v).then(()=>log("CMD saf threshold -> "+v));
+    db.ref(REF_PATH + "/cmd/saf/threshold").set(v)
+      .then(()=>log("CMD saf threshold -> "+v))
+      .catch(err=>log("ERR saf th: " + err.message));
   }, 600);
 });
 
-/* ===================== MAP + TRAIL ===================== */
+// ===== Map + Trail =====
 let map, marker, trailLine;
 let trail=[], lastTrailPush=0;
 
 function initMap(){
   map = L.map('map');
-  map.setView([3.5952, 98.6722], 14); // default Medan
+  map.setView([3.5952, 98.6722], 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   trailLine = L.polyline([], { weight: 4 }).addTo(map);
 }
-
 function updateMap(lat,lng){
   const follow = document.getElementById("follow").checked;
-
   if(!marker){
     marker = L.marker([lat,lng]).addTo(map);
     if(follow) map.setView([lat,lng], 17);
@@ -249,7 +177,6 @@ function updateMap(lat,lng){
     marker.setLatLng([lat,lng]);
     if(follow) map.panTo([lat,lng], {animate:true});
   }
-
   const now=Date.now();
   if(!lastTrailPush || (now-lastTrailPush)>1200){
     lastTrailPush=now;
@@ -258,85 +185,88 @@ function updateMap(lat,lng){
     trailLine.setLatLngs(trail);
   }
 }
-
-function resetTrail(){
-  trail=[];
-  if(trailLine) trailLine.setLatLngs([]);
-  log("Trail reset");
-}
-
+function resetTrail(){ trail=[]; if(trailLine) trailLine.setLatLngs([]); log("Trail reset"); }
 function openMaps(){
   if(!window._lastFix) return alert("Belum ada FIX.");
   window.open(`https://maps.google.com/?q=${window._lastFix.lat},${window._lastFix.lng}`,"_blank");
 }
-
 initMap();
 
-/* ===================== REALTIME LISTENER ===================== */
-function startRealtime(){
-  if(started) return;
-  started = true;
-
-  rootRef.on("value", (snap)=>{
-    const d = snap.val() || {};
-    document.getElementById("lu").textContent = "Last UI: " + new Date().toLocaleTimeString();
-
-    // status aktual (dibaca dari status, bukan CMD)
-    const eng = !!d.engine;
-    const alm = !!d.alarm;
-
-    setBadge(document.getElementById("bEngine"), eng, "⚡ Engine: " + (eng ? "ON" : "OFF"));
-    setBadge(document.getElementById("bAlarm"),  alm, "🔔 Alarm: " + (alm ? "ON" : "OFF"), alm ? "ok" : "warn");
-
-    // gps
-    const g = d.gps || {};
-    const hasFix = !!g.hasFix;
-    const lat = Number(g.lat||0);
-    const lng = Number(g.lng||0);
-
-    document.getElementById("gpsStatus").textContent = hasFix ? "FIX OK" : "NO FIX";
-    document.getElementById("latlng").textContent = hasFix ? `${fmt(lat,6)}, ${fmt(lng,6)}` : "-";
-    document.getElementById("spd").textContent = fmt(g.speed||0, 1);
-    document.getElementById("sats").textContent = (g.sats ?? "-");
-    document.getElementById("hdop").textContent = fmt(g.hdop||99.9, 1);
-
-    // SAF status (dibaca dari status)
-    const saf = d.saf || {};
-    const safEn = !!saf.enabled;
-    const safTh = Number(saf.threshold||25);
-    const baseOk = !!saf.baseValid;
-    const alert = !!saf.alert;
-
-    if(alert) setBadge(document.getElementById("bSaf"), true, `🛡 SAF: ON (${safTh}m) • ALERT`, "bad");
-    else setBadge(document.getElementById("bSaf"), safEn, `🛡 SAF: ${safEn?"ON":"OFF"} (${safTh}m)`, safEn ? "ok" : "bad");
-
-    document.getElementById("safInfo").textContent = `base:${baseOk?"OK":"-"} • alert:${alert?"YES":"NO"}`;
-
-    // Sync input dari CMD (biar UI mengikuti setting command terakhir)
-    const cmd = d.cmd || {};
-    const cmdSaf = (cmd.saf || {});
-    const cmdEn = !!cmdSaf.enabled;
-    const cmdTh = Number(cmdSaf.threshold||safTh);
-
-    const tog = document.getElementById("safToggle");
-    if(tog.checked !== cmdEn) tog.checked = cmdEn;
-
-    const th = document.getElementById("safTh");
-    if(Number(th.value) !== cmdTh) th.value = cmdTh;
-
-    // map update
-    if(hasFix && lat && lng){
-      window._lastFix = {lat,lng};
-      updateMap(lat,lng);
-    }
-
-  }, (err)=>{
-    log("Firebase listen error: " + err.message);
-  });
-
-  log("Realtime listener ON ✅");
+// ===== HYBRID: tampilkan STATUS kalau ada, kalau tidak pakai CMD =====
+function pickBool(statusVal, cmdVal){
+  // kalau statusVal benar-benar boolean -> pakai status
+  if (typeof statusVal === "boolean") return { val: statusVal, src: "status" };
+  // kalau status kosong -> fallback ke cmd
+  if (typeof cmdVal === "boolean") return { val: cmdVal, src: "cmd" };
+  return { val: false, src: "-" };
 }
+function pickNum(statusVal, cmdVal, defV){
+  const sOk = (typeof statusVal === "number" && !Number.isNaN(statusVal));
+  const cOk = (typeof cmdVal === "number" && !Number.isNaN(cmdVal));
+  if (sOk) return { val: statusVal, src: "status" };
+  if (cOk) return { val: cmdVal, src: "cmd" };
+  return { val: defV, src: "-" };
+}
+
+rootRef.on("value", (snap)=>{
+  const d = snap.val() || {};
+  const cmd = d.cmd || {};
+  const cmdSaf = cmd.saf || {};
+
+  // engine/alarm hybrid
+  const engPick = pickBool(d.engine, cmd.engine);
+  const almPick = pickBool(d.alarm,  cmd.alarm);
+
+  badge(document.getElementById("bEngine"), engPick.val, "⚡ Engine: " + (engPick.val ? "ON" : "OFF"));
+  badge(document.getElementById("bAlarm"),  almPick.val, "🔔 Alarm: " + (almPick.val ? "ON" : "OFF"));
+
+  // SAF hybrid (status.saf jika ada, fallback cmd.saf)
+  const saf = d.saf || {};
+  const safEnPick = pickBool(saf.enabled, cmdSaf.enabled);
+  const thPick = pickNum(saf.threshold, cmdSaf.threshold, 25);
+
+  badge(document.getElementById("bSaf"), safEnPick.val, `🛡 SAF: ${safEnPick.val ? "ON" : "OFF"} (${thPick.val}m)`);
+
+  // info tambahan (ambil dari status kalau ada)
+  const baseValid = (typeof saf.baseValid === "boolean") ? saf.baseValid : false;
+  const alert = (typeof saf.alert === "boolean") ? saf.alert : false;
+  document.getElementById("safInfo").textContent = `base:${baseValid?"OK":"-"} • alert:${alert?"YES":"NO"}`;
+
+  // tampilkan sumber yang sedang dipakai
+  document.getElementById("src").textContent = `src: eng=${engPick.src} alm=${almPick.src} saf=${safEnPick.src}`;
+
+  // sync UI input berdasarkan CMD (biar tombol tetap konsisten)
+  const tog = document.getElementById("safToggle");
+  if (tog.checked !== !!cmdSaf.enabled) tog.checked = !!cmdSaf.enabled;
+
+  const th = document.getElementById("safTh");
+  const cmdTh = Number(cmdSaf.threshold || thPick.val);
+  if (Number(th.value) !== cmdTh) th.value = cmdTh;
+
+  // gps
+  const g = d.gps || {};
+  const hasFix = !!g.hasFix;
+  const lat = Number(g.lat||0);
+  const lng = Number(g.lng||0);
+
+  document.getElementById("lu").textContent = "Last UI: " + new Date().toLocaleTimeString();
+  document.getElementById("gpsStatus").textContent = hasFix ? "FIX OK" : "NO FIX";
+  document.getElementById("latlng").textContent = hasFix ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : "-";
+  document.getElementById("spd").textContent = Number(g.speed||0).toFixed(1);
+  document.getElementById("sats").textContent = (g.sats ?? "-");
+  document.getElementById("hdop").textContent = Number(g.hdop||99.9).toFixed(1);
+
+  if(hasFix && lat && lng){
+    window._lastFix = {lat,lng};
+    updateMap(lat,lng);
+  }
+}, (err)=>{
+  log("Listener ERR: " + err.message);
+});
 </script>
+
+</body>
+</html>
 
 </body>
 </html>
