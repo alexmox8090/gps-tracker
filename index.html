@@ -140,25 +140,18 @@
   <div id="log" class="mono tiny" style="white-space:pre-wrap;line-height:1.35"></div>
 </div>
 
-
-<!-- Firebase v8 compat (mudah, tanpa build) -->
+<!-- Firebase v8 compat -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-/* ===================== CONFIG =======================
-   Isi sesuai project Firebase kamu
-==================================================== */
+/* ===================== CONFIG ======================= */
 const firebaseConfig = {
-  // WAJIB: databaseURL project kamu
   databaseURL: "https://gpsmotor20251-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
-
-// Device path (bisa banyak motor: motor1, motor2, dst)
 const DEVICE_ID = "motor1";
-const REF_PATH = "trackers/" + DEVICE_ID;
-
-/* ================================================== */
+const REF_PATH  = "trackers/" + DEVICE_ID;
+/* =================================================== */
 
 firebase.initializeApp(firebaseConfig);
 const db  = firebase.database();
@@ -174,7 +167,6 @@ function log(s){
   const t = new Date().toLocaleTimeString();
   el.textContent = `[${t}] ${s}\n` + el.textContent;
 }
-
 function nowStr(){ return new Date().toLocaleTimeString(); }
 function fmt(n,d){ return (n==null || !isFinite(Number(n))) ? "-" : Number(n).toFixed(d); }
 
@@ -184,7 +176,6 @@ function setBadge(elId, on, text){
   el.textContent = text;
   el.className = "badge " + (on ? "ok" : "bad");
 }
-
 function showSaved(msg){
   const el = document.getElementById("safSaved");
   if(!el) return;
@@ -192,15 +183,17 @@ function showSaved(msg){
   setTimeout(()=>{ el.textContent=""; }, 1200);
 }
 
-/* ===================== COMMANDS ===================== */
+/* ===================== COMMANDS (FIXED PATH) ===================== */
+/* Engine ditulis ke /cmd/engine (sesuai DB kamu) */
 function cmdEngine(on){
-  ref.update({ engine: !!on }).then(()=>{
-    log("Engine -> " + (on?"ON":"OFF"));
+  ref.child("cmd").update({ engine: !!on }).then(()=>{
+    log("cmd.engine -> " + (on?"ON":"OFF"));
   }).catch(e=>alert("Gagal engine: "+e.message));
 }
+/* Alarm di root: /alarm (sesuai screenshot kamu) */
 function cmdAlarm(on){
   ref.update({ alarm: !!on }).then(()=>{
-    log("Alarm -> " + (on?"ON":"OFF"));
+    log("alarm -> " + (on?"ON":"OFF"));
   }).catch(e=>alert("Gagal alarm: "+e.message));
 }
 
@@ -217,22 +210,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (tog){
+  if(tog){
     tog.addEventListener("change", () => {
-      // Kalau ON: otomatis ARM dari lokasi terakhir valid
       const enabled = tog.checked;
 
-      // update enabled dulu
       ref.child("saf").update({ enabled })
         .then(async ()=>{
           showSaved(enabled ? "✅ SAF ON" : "✅ SAF OFF");
-          log("SAF -> " + (enabled?"ON":"OFF"));
+          log("saf.enabled -> " + (enabled?"true":"false"));
 
           if(enabled){
-            // Auto ARM: simpan patokan titik dari lokasi terakhir valid
-            const d = lastData;
-            const lat = d ? Number(d.lat) : 0;
-            const lng = d ? Number(d.lng) : 0;
+            // Auto ARM: ambil GPS terakhir valid dari d.gps
+            const d = lastData || {};
+            const g = d.gps || {};
+            const lat = Number(g.lat || 0);
+            const lng = Number(g.lng || 0);
+
             if(isFinite(lat) && isFinite(lng) && !(lat===0 && lng===0)){
               await ref.child("saf").update({
                 baseLat: lat,
@@ -242,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
               showSaved("📍 ARM OK");
               log("Auto ARM baseLat/baseLng tersimpan");
             } else {
-              log("Auto ARM gagal (GPS belum valid). Nanti kalau GPS sudah valid, toggle OFF->ON lagi.");
+              log("Auto ARM gagal (GPS belum valid). Toggle OFF->ON setelah FIX.");
             }
           }
         })
@@ -250,8 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Threshold auto-save debounce
-  if (th){
+  if(th){
     th.addEventListener("input", () => {
       clearTimeout(_thTimer);
       _thTimer = setTimeout(() => {
@@ -261,7 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
         th.value = v;
 
         ref.child("saf").update({ threshold: v })
-          .then(()=>{ showSaved("✅ Saved "+v+"m"); log("SAF threshold -> "+v+"m"); })
+          .then(()=>{ showSaved("✅ Saved "+v+"m"); log("saf.threshold -> "+v); })
           .catch(e=>alert("Gagal save threshold: "+e.message));
       }, 600);
     });
@@ -278,8 +270,7 @@ let lastTrailPush = 0;
 
 function initMap(){
   map = L.map('map', { zoomControl: true });
-  // default view Medan
-  map.setView([3.5952, 98.6722], 14);
+  map.setView([3.5952, 98.6722], 14); // default Medan
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -288,13 +279,11 @@ function initMap(){
 
   trailLine = L.polyline([], { weight: 4 }).addTo(map);
 }
-
 function resetTrail(){
   trail = [];
   if(trailLine) trailLine.setLatLngs([]);
   log("Trail reset");
 }
-
 function updateMap(lat, lng){
   if(!map) return;
 
@@ -308,7 +297,6 @@ function updateMap(lat, lng){
     if(follow) map.panTo([lat, lng], { animate:true });
   }
 
-  // push trail tiap 1.2s biar gak terlalu berat
   const now = Date.now();
   if(!lastTrailPush || (now - lastTrailPush) > 1200){
     lastTrailPush = now;
@@ -320,41 +308,40 @@ function updateMap(lat, lng){
 
 /* ===================== UI HELPERS ===================== */
 function copyCoord(){
-  if(!lastData) return alert("Belum ada data.");
-  const lat = Number(lastData.lat||0), lng = Number(lastData.lng||0);
+  const d = lastData || {};
+  const g = d.gps || {};
+  const lat = Number(g.lat||0), lng = Number(g.lng||0);
   if(!isFinite(lat)||!isFinite(lng)|| (lat===0 && lng===0)) return alert("Belum ada FIX.");
   const t = `${lat.toFixed(6)},${lng.toFixed(6)}`;
   navigator.clipboard.writeText(t).then(()=>alert("Copied: "+t)).catch(()=>alert(t));
 }
 function openMaps(){
-  if(!lastData) return alert("Belum ada data.");
-  const lat = Number(lastData.lat||0), lng = Number(lastData.lng||0);
+  const d = lastData || {};
+  const g = d.gps || {};
+  const lat = Number(g.lat||0), lng = Number(g.lng||0);
   if(!isFinite(lat)||!isFinite(lng)|| (lat===0 && lng===0)) return alert("Belum ada FIX.");
   window.open(`https://maps.google.com/?q=${lat},${lng}`,"_blank");
 }
 
-/* ===================== POLLING + RENDER =====================
-   Web UI pakai polling agar tetap ringan dan stabil.
-   (Firebase realtime listener tetap ada, tapi polling berguna untuk
-    memastikan UI update walau jaringan mobile "nakal".)
-============================================================== */
-
+/* ===================== POLLING + RENDER (FIXED READ PATHS) ===================== */
 function startPolling(){
   const rate = Number(document.getElementById("rate")?.value || 500);
   if(_pollTimer) clearInterval(_pollTimer);
   _pollTimer = setInterval(fetchAndRender, rate);
   fetchAndRender();
 }
-
-function setGpsStatusFix(isFix){
+function setGpsStatusFix(isFix, hasData){
   const st = document.getElementById("gpsStatus");
   if(!st) return;
   if(isFix){
     st.textContent = "FIX OK";
     st.className = "v ok";
-  } else {
+  } else if(hasData){
     st.textContent = "NO FIX";
     st.className = "v warn";
+  } else {
+    st.textContent = "NO DATA";
+    st.className = "v bad";
   }
 }
 
@@ -366,32 +353,38 @@ async function fetchAndRender(){
 
     document.getElementById("lu").textContent = nowStr();
 
-    // read values
-    const lat  = Number(d.lat || 0);
-    const lng  = Number(d.lng || 0);
-    const spd  = Number(d.speed || 0);
-    const sats = Number(d.sats || 0);
-    const hdop = Number(d.hdop || 99.9);
+    // --- READ GPS FROM /gps ---
+    const g = d.gps || {};
+    const lat  = Number(g.lat || 0);
+    const lng  = Number(g.lng || 0);
+    const spd  = Number(g.speed || 0);
+    const sats = Number(g.sats || 0);
+    const hdop = Number(g.hdop || 99.9);
+    const hasFix = (g.hasFix === true) || ((sats > 0) && isFinite(lat) && isFinite(lng) && !(lat===0 && lng===0) && (hdop < 50));
+    const hasData = (g.lastUpdate && Number(g.lastUpdate) > 0) || (sats > 0);
 
-    const fix = (sats > 0) && isFinite(lat) && isFinite(lng) && !(lat===0 && lng===0) && (hdop < 50);
+    setGpsStatusFix(!!hasFix, !!hasData);
 
-    setGpsStatusFix(fix);
-    document.getElementById("gpsSince").textContent = "Last update: " + (d.lastUpdate ? new Date(d.lastUpdate).toLocaleString() : "-");
+    const lastUpd = Number(g.lastUpdate || d.lastUpdate || 0);
+    document.getElementById("gpsSince").textContent =
+      "Last update: " + (lastUpd ? new Date(lastUpd).toLocaleString() : "-");
+
     document.getElementById("sats").textContent = String(sats);
     document.getElementById("hdop").textContent = fmt(hdop, 1);
     document.getElementById("latlng").textContent = `${fmt(lat,6)}, ${fmt(lng,6)}`;
     document.getElementById("speed").textContent = fmt(spd, 1);
 
-    // badges
-    setBadge("bEngine", !!d.engine, `⚡ Engine: ${d.engine ? "ON" : "OFF"}`);
-    setBadge("bAlarm",  !!d.alarm,  `🔔 Alarm: ${d.alarm ? "ON" : "OFF"}`);
+    // --- BADGES ---
+    const cmd = d.cmd || {};
+    setBadge("bEngine", !!cmd.engine, `⚡ Engine: ${cmd.engine ? "ON" : "OFF"}`);
+    setBadge("bAlarm",  !!d.alarm,    `🔔 Alarm: ${d.alarm ? "ON" : "OFF"}`);
 
     const saf = d.saf || {};
     const safEn = !!saf.enabled;
     const safTh = Number(saf.threshold || 25);
     setBadge("bSaf", safEn, `🛡 SAF (${safTh}m) ${safEn ? "ON" : "OFF"}`);
 
-    // sync SAF UI from Firebase (biar konsisten)
+    // sync SAF UI
     const tog = document.getElementById("safToggle");
     if(tog && tog.checked !== safEn) tog.checked = safEn;
 
@@ -399,7 +392,7 @@ async function fetchAndRender(){
     if(thIn && Number(thIn.value) !== safTh) thIn.value = safTh;
 
     // map + trail
-    if(fix){
+    if(hasFix){
       updateMap(lat, lng);
     }
 
@@ -412,13 +405,11 @@ async function fetchAndRender(){
   }
 }
 
-/* Optional: realtime listener tambahan (tetap dipakai) */
+/* Optional realtime listener (ringan) */
 ref.on("value", (snap)=>{
-  // kalau mau super realtime, kita bisa panggil fetchAndRender() juga,
-  // tapi jangan terlalu sering. Cukup update lastData ringan:
   lastData = snap.val() || lastData;
 });
-
 </script>
+
 </body>
 </html>
