@@ -25,105 +25,146 @@
     button{cursor:pointer}
     #map{width:100%;height:360px;border-radius:14px;border:1px solid #334155;overflow:hidden;background:#0f1623}
     .tiny{font-size:11px;color:var(--mut)}
+    .hidden{display:none}
   </style>
 </head>
 <body>
 
 <h2>🏍 GPS TRACKER MOTOR (CMD + Trail + SAF)</h2>
 
-<div class="card">
-  <div class="row" style="justify-content:space-between">
-    <div>
-      <div class="k">GPS</div>
-      <div id="gpsStatus" class="v">-</div>
-      <div class="tiny" id="lu">-</div>
-    </div>
-    <div class="row">
-      <span id="bEngine" class="badge">⚡ Engine: -</span>
-      <span id="bAlarm"  class="badge">🔔 Alarm: -</span>
-      <span id="bSaf"    class="badge">🛡 SAF: -</span>
-    </div>
-  </div>
-
-  <div class="grid" style="margin-top:12px">
-    <div>
-      <div class="k">Lat/Lng</div>
-      <div id="latlng" class="v mono">-</div>
-    </div>
-    <div>
-      <div class="k">Speed / Sat / HDOP</div>
-      <div class="v mono"><span id="spd">-</span> km/h • <span id="sats">-</span> • <span id="hdop">-</span></div>
-    </div>
-  </div>
-
-  <hr style="border:none;border-top:1px solid #263247;margin:12px 0"/>
-
-  <div class="row">
-    <button onclick="cmdEngine(true)">ENGINE ON</button>
-    <button onclick="cmdEngine(false)">ENGINE OFF</button>
-    <button onclick="cmdAlarm(true)">ALARM ON</button>
-    <button onclick="cmdAlarm(false)">ALARM OFF</button>
-  </div>
-
-  <hr style="border:none;border-top:1px solid #263247;margin:12px 0"/>
-
-  <div class="row">
-    <label class="tiny">SAF:</label>
-    <input id="safToggle" type="checkbox">
-    <label class="tiny">Threshold (m)</label>
-    <input id="safTh" type="number" min="5" max="500" value="25" style="width:110px">
-    <button onclick="safSetBase()">SET BASE</button>
-    <span id="safInfo" class="tiny">-</span>
-  </div>
-
+<!-- ===================== LOGIN (PIN) ===================== -->
+<div id="loginCard" class="card">
+  <div class="k">PIN Login</div>
   <div class="row" style="margin-top:10px">
-    <label class="tiny" style="display:flex;gap:8px;align-items:center">
-      <input id="follow" type="checkbox" checked> Follow Map
-    </label>
-    <button onclick="resetTrail()">Reset Trail</button>
-    <button onclick="openMaps()">Open Google Maps</button>
+    <input id="pin" type="password" inputmode="numeric" placeholder="Masukkan PIN" style="max-width:220px">
+    <button onclick="doLogin()">Login</button>
+  </div>
+  <div class="tiny" style="margin-top:8px">
+    PIN ini hanya kunci layar. Security utama tetap Firebase Rules.
   </div>
 </div>
 
-<div class="card">
-  <div class="k">Map + Trail</div>
-  <div id="map"></div>
-  <div class="tiny" style="margin-top:8px">Jika NO FIX, marker & trail belum muncul.</div>
+<!-- ===================== APP ===================== -->
+<div id="app" class="hidden">
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <div class="k">GPS</div>
+        <div id="gpsStatus" class="v">-</div>
+        <div class="tiny" id="lu">-</div>
+      </div>
+      <div class="row">
+        <span id="bEngine" class="badge">⚡ Engine: -</span>
+        <span id="bAlarm"  class="badge">🔔 Alarm: -</span>
+        <span id="bSaf"    class="badge">🛡 SAF: -</span>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:12px">
+      <div>
+        <div class="k">Lat/Lng</div>
+        <div id="latlng" class="v mono">-</div>
+      </div>
+      <div>
+        <div class="k">Speed / Sat / HDOP</div>
+        <div class="v mono"><span id="spd">-</span> km/h • <span id="sats">-</span> • <span id="hdop">-</span></div>
+      </div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #263247;margin:12px 0"/>
+
+    <div class="row">
+      <button onclick="cmdEngine(true)">ENGINE ON</button>
+      <button onclick="cmdEngine(false)">ENGINE OFF</button>
+      <button onclick="cmdAlarm(true)">ALARM ON</button>
+      <button onclick="cmdAlarm(false)">ALARM OFF</button>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #263247;margin:12px 0"/>
+
+    <div class="row">
+      <label class="tiny">SAF:</label>
+      <input id="safToggle" type="checkbox">
+      <label class="tiny">Threshold (m)</label>
+      <input id="safTh" type="number" min="5" max="500" value="25" style="width:110px">
+      <button onclick="safSetBase()">SET BASE</button>
+      <span id="safInfo" class="tiny">-</span>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <label class="tiny" style="display:flex;gap:8px;align-items:center">
+        <input id="follow" type="checkbox" checked> Follow Map
+      </label>
+      <button onclick="resetTrail()">Reset Trail</button>
+      <button onclick="openMaps()">Open Google Maps</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="k">Map + Trail</div>
+    <div id="map"></div>
+    <div class="tiny" style="margin-top:8px">Jika NO FIX, marker & trail belum muncul.</div>
+  </div>
+
+  <div class="card">
+    <div class="k">Log</div>
+    <div id="log" class="mono tiny" style="white-space:pre-wrap;line-height:1.35"></div>
+  </div>
+
 </div>
 
-<div class="card">
-  <div class="k">Log</div>
-  <div id="log" class="mono tiny" style="white-space:pre-wrap;line-height:1.35"></div>
-</div>
-
+<!-- Firebase v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
+/* ===================== SETTINGS ===================== */
+// Ganti PIN sesukamu
+const PIN_CODE = "2580";
+
+// Device (1 motor saja)
+const DEVICE_ID = "motor1";
+const REF_PATH = "trackers/" + DEVICE_ID;
+
+/* Firebase config:
+   - Untuk RTDB minimal databaseURL saja sebenarnya cukup.
+   - Tapi aku lengkapi pakai apiKey biar rapih & konsisten.
+*/
 const firebaseConfig = {
-  databaseURL: "https://gpsmotor20251-default-rtdb.asia-southeast1.firebasedatabase.app/"
+  apiKey: "AIzaSyAtTmnq40bvwFsKBEcV3wqlpAjwe9-9690",
+  databaseURL: "https://gpsmotor20251-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  authDomain: "gpsmotor20251-default-rtdb.firebaseapp.com",
+  projectId: "gpsmotor20251-default-rtdb"
 };
 
 firebase.initializeApp(firebaseConfig);
 
-const DEVICE_ID = "motor1";
-const REF_PATH = "trackers/" + DEVICE_ID;
-
 const db = firebase.database();
 const rootRef = db.ref(REF_PATH);
 
+/* ===================== LOGIN ===================== */
+function doLogin(){
+  const p = (document.getElementById("pin").value || "").trim();
+  if(p !== PIN_CODE) return alert("PIN salah!");
+  document.getElementById("loginCard").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  log("Login OK ✅");
+}
+
+/* ===================== UI HELPERS ===================== */
 function log(s){
   const el = document.getElementById("log");
   const t = new Date().toLocaleTimeString();
-  el.textContent = `[${t}] ${s}\n` + el.textContent;
+  el.textContent = [${t}] ${s}\n + el.textContent;
 }
 
-function badge(el, on, text){
+function setBadge(el, on, text){
   el.textContent = text;
   el.className = "badge " + (on ? "ok" : "bad");
 }
 
-// ===== CMD writers (KONSISTEN) =====
+/* ===================== CMD WRITERS (KONSISTEN) ===================== */
 function cmdEngine(on){
   db.ref(REF_PATH + "/cmd/engine").set(!!on).then(()=>log("CMD engine -> " + on));
 }
@@ -131,13 +172,16 @@ function cmdAlarm(on){
   db.ref(REF_PATH + "/cmd/alarm").set(!!on).then(()=>log("CMD alarm -> " + on));
 }
 function safSetBase(){
+  // one-shot (firmware akan reset ke false setelah base diset)
   db.ref(REF_PATH + "/cmd/saf/setBase").set(true).then(()=>log("CMD saf setBase"));
 }
 
 // SAF toggle + threshold auto save
 document.getElementById("safToggle").addEventListener("change", (e)=>{
-  db.ref(REF_PATH + "/cmd/saf/enabled").set(!!e.target.checked).then(()=>log("CMD saf enabled -> "+e.target.checked));
+  db.ref(REF_PATH + "/cmd/saf/enabled").set(!!e.target.checked)
+    .then(()=>log("CMD saf enabled -> "+e.target.checked));
 });
+
 let thTimer=null;
 document.getElementById("safTh").addEventListener("input", (e)=>{
   clearTimeout(thTimer);
@@ -149,7 +193,7 @@ document.getElementById("safTh").addEventListener("input", (e)=>{
   }, 600);
 });
 
-// ===== Map + Trail =====
+/* ===================== MAP + TRAIL ===================== */
 let map, marker, trailLine;
 let trail=[], lastTrailPush=0;
 
@@ -159,8 +203,10 @@ function initMap(){
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   trailLine = L.polyline([], { weight: 4 }).addTo(map);
 }
+
 function updateMap(lat,lng){
   const follow = document.getElementById("follow").checked;
+
   if(!marker){
     marker = L.marker([lat,lng]).addTo(map);
     if(follow) map.setView([lat,lng], 17);
@@ -177,21 +223,27 @@ function updateMap(lat,lng){
     trailLine.setLatLngs(trail);
   }
 }
-function resetTrail(){ trail=[]; if(trailLine) trailLine.setLatLngs([]); log("Trail reset"); }
+
+function resetTrail(){
+  trail=[];
+  if(trailLine) trailLine.setLatLngs([]);
+  log("Trail reset");
+}
+
 function openMaps(){
   if(!window._lastFix) return alert("Belum ada FIX.");
-  window.open(`https://maps.google.com/?q=${window._lastFix.lat},${window._lastFix.lng}`,"_blank");
+  window.open(https://maps.google.com/?q=${window._lastFix.lat},${window._lastFix.lng},"_blank");
 }
 
 initMap();
 
-// ===== Polling =====
+/* ===================== POLLING (500ms) ===================== */
 async function tick(){
   try{
     const snap = await rootRef.get();
     const d = snap.val() || {};
 
-    // status aktual
+    // status aktual (dibaca dari status, bukan CMD)
     const eng = !!d.engine;
     const alm = !!d.alarm;
 
@@ -203,27 +255,25 @@ async function tick(){
 
     document.getElementById("lu").textContent = "Last UI: " + new Date().toLocaleTimeString();
     document.getElementById("gpsStatus").textContent = hasFix ? "FIX OK" : "NO FIX";
-    document.getElementById("latlng").textContent = hasFix ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : "-";
+    document.getElementById("latlng").textContent = hasFix ? ${lat.toFixed(6)}, ${lng.toFixed(6)} : "-";
     document.getElementById("spd").textContent = Number(g.speed||0).toFixed(1);
-    document.getElementById("sats").textContent = g.sats ?? "-";
+    document.getElementById("sats").textContent = (g.sats ?? "-");
     document.getElementById("hdop").textContent = Number(g.hdop||99.9).toFixed(1);
 
-    badge(document.getElementById("bEngine"), eng, "⚡ Engine: " + (eng ? "ON" : "OFF"));
-    badge(document.getElementById("bAlarm"),  alm, "🔔 Alarm: " + (alm ? "ON" : "OFF"));
+    setBadge(document.getElementById("bEngine"), eng, "⚡ Engine: " + (eng ? "ON" : "OFF"));
+    setBadge(document.getElementById("bAlarm"),  alm, "🔔 Alarm: " + (alm ? "ON" : "OFF"));
 
-    // SAF status
+    // SAF status (dibaca dari status)
     const saf = d.saf || {};
     const safEn = !!saf.enabled;
     const safTh = Number(saf.threshold||25);
     const baseOk = !!saf.baseValid;
     const alert = !!saf.alert;
 
-    badge(document.getElementById("bSaf"), safEn, "🛡 SAF: " + (safEn ? "ON" : "OFF") + ` (${safTh}m)`);
+    setBadge(document.getElementById("bSaf"), safEn, "🛡 SAF: " + (safEn ? "ON" : "OFF") + ` (${safTh}m)`);
+    document.getElementById("safInfo").textContent = base:${baseOk?"OK":"-"} • alert:${alert?"YES":"NO"};
 
-    document.getElementById("safInfo").textContent =
-      `base:${baseOk?"OK":"-"} • alert:${alert?"YES":"NO"}`;
-
-    // sync inputs from cmd (optional)
+    // Sync input dari CMD (biar yang tampil sesuai setting command terakhir)
     const cmd = d.cmd || {};
     const cmdSaf = (cmd.saf || {});
     const cmdEn = !!cmdSaf.enabled;
@@ -235,7 +285,7 @@ async function tick(){
     const th = document.getElementById("safTh");
     if(Number(th.value) !== cmdTh) th.value = cmdTh;
 
-    // map
+    // map update
     if(hasFix && lat && lng){
       window._lastFix = {lat,lng};
       updateMap(lat,lng);
